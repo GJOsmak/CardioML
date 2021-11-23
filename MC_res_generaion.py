@@ -10,8 +10,8 @@ from sklearn.model_selection import train_test_split
 from scipy import stats
 from multiprocessing import Manager, Pool, cpu_count
 
-NUM_ITERATIONS = 200
-NUM_PER_FILE = 5
+NUM_ITERATIONS = 100000
+NUM_PER_FILE = 10000
 NUM_PROCESSES = cpu_count()
 
 class Data(object): 
@@ -45,6 +45,13 @@ def MC_model(X, y, C=0.03):
 
         _X_train = pd.DataFrame(X).iloc[train_idx, :]
         _y_train = np.array(y)[train_idx]
+        _X_test = pd.DataFrame(X).iloc[test_idx, :]
+        _y_test = np.array(y)[test_idx]
+        
+        scaler = StandardScaler()
+        _X_train = pd.DataFrame(scaler.fit_transform(_X_train), columns=_X_train.columns)
+        _X_test = pd.DataFrame(scaler.transform(_X_test), columns=_X_test.columns)
+
 
         # обучаем лог.рег. с ранее отобранным коэффициентом регуляризации
 
@@ -54,7 +61,7 @@ def MC_model(X, y, C=0.03):
 
         # тестим
 
-        roc_auc = metrics.roc_auc_score(y_score=linear_regressor.predict(pd.DataFrame(X).iloc[test_idx, :]), y_true=np.array(y)[test_idx])
+        roc_auc = metrics.roc_auc_score(y_score=linear_regressor.predict(_X_test), y_true=_y_test)
 
         # далее отбираем фичи из моделей, которые хоть как-то работают (roc_auc > 0.7)
 
@@ -64,7 +71,7 @@ def MC_model(X, y, C=0.03):
             mask = np.append(mask[0], roc_auc)
         
         return mask
-
+    
 def run_iteration(seed):
     np.random.seed(seed)
     val = MC_model(ns.X, ns.y)

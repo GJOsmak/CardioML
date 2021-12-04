@@ -10,8 +10,8 @@ from sklearn.model_selection import train_test_split
 from scipy import stats
 from multiprocessing import Manager, Pool, cpu_count
 
-NUM_ITERATIONS = 100000
-NUM_PER_FILE = 10000
+NUM_ITERATIONS = 10000
+NUM_PER_FILE = 1000
 NUM_PROCESSES = cpu_count()
 
 class Data(object): 
@@ -89,6 +89,14 @@ for i in range(NUM_ITERATIONS // NUM_PER_FILE):
         res = p.map(run_iteration, [seed for seed in range(i*NUM_PER_FILE, (i+1)*NUM_PER_FILE)])
         
     out_df = pd.DataFrame.from_records(res)
+    out_df = out_df.mean(axis=0)
+
+    if out_df.shape[0] != (X_shared.shape[1] + 1): #shape + roc_auc col in out_df
+        print('shape not equal', out_df.shape[0], X_shared.shape[1])
+        continue
+ 
+    out_df = pd.DataFrame(out_df).transpose()
+
     if i == 0:
         # create the initial file
         # write the data in a form of pandas data frame
